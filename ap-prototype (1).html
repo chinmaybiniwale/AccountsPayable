@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESO AP Agents — Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#2D5BBA;--primary-dark:#1E3F82;--primary-light:rgba(45,91,186,.08);
+  --bg:#F5F4F1;--surface:#fff;--surface2:#F9F8F6;--border:rgba(0,0,0,.08);--border-strong:rgba(0,0,0,.14);
+  --text-primary:#1A1917;--text-secondary:#5C5A55;--text-tertiary:#9B9891;
+  --green:#1D9E75;--green-bg:#E1F5EE;--green-text:#085041;
+  --amber:#BA7517;--amber-bg:#FAEEDA;--amber-text:#633806;
+  --red:#C93535;--red-bg:#FCEBEB;--red-text:#791F1F;
+  --blue:#185FA5;--blue-bg:#E6F1FB;--blue-text:#0C447C;
+  --purple:#534AB7;--purple-bg:#EEEDFE;--purple-text:#3C3489;
+  --font:'DM Sans',-apple-system,sans-serif;--font-mono:'DM Mono','Fira Code',monospace;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.10),0 4px 8px rgba(0,0,0,.04);
+}
+html{font-size:14px}body{font-family:var(--font);background:var(--bg);color:var(--text-primary);-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.animate-in{animation:fadeIn .3s ease both}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.badge-green{background:var(--green-bg);color:var(--green-text)}.badge-amber{background:var(--amber-bg);color:var(--amber-text)}
+.badge-red{background:var(--red-bg);color:var(--red-text)}.badge-blue{background:var(--blue-bg);color:var(--blue-text)}
+.badge-purple{background:var(--purple-bg);color:var(--purple-text)}.badge-gray{background:var(--surface2);color:var(--text-secondary);border:1px solid var(--border)}
+.btn{font-family:var(--font);font-size:12px;font-weight:500;padding:6px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text-primary);cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--surface2);box-shadow:var(--shadow-sm)}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn-primary:hover{background:var(--primary-dark)}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.conf-bar{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden}.conf-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+
+/* ═══ LOGIN ═══ */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#0f1829 0%,#162544 40%,#0f1829 100%)}
+#login-screen .bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 30% 50%,rgba(45,91,186,.18) 0%,transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(45,91,186,.12) 0%,transparent 60%)}
+.login-card{position:relative;z-index:1;width:100%;max-width:440px;background:linear-gradient(160deg,#2D5BBA 0%,#1E3F82 60%,#142C5E 100%);border-radius:20px;padding:48px 44px;box-shadow:0 32px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06);text-align:center}
+.login-card h1{font-size:26px;font-weight:700;color:#fff;margin:10px 0}
+.login-btn{width:100%;padding:15px 24px;background:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;color:#0f1829;cursor:pointer;transition:all .15s;box-shadow:0 4px 16px rgba(0,0,0,.2);margin:32px 0 16px;font-family:var(--font)}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+#app-screen{display:none}
+
+/* ═══ HEADER ═══ */
+.app-header{background:#0f1829;border-bottom:1px solid rgba(255,255,255,.07);padding:0 20px;height:52px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.header-stats{display:flex;gap:1px;margin-left:8px}
+.header-stat{padding:4px 14px;text-align:center;border-right:1px solid rgba(255,255,255,.06)}
+.header-stat .val{font-size:14px;font-weight:700;line-height:1}.header-stat .lbl{font-size:8px;color:rgba(255,255,255,.3);margin-top:2.5px;letter-spacing:.06em}
+
+/* ═══ TABS ═══ */
+.tab-nav{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;display:flex;gap:0;overflow-x:auto}
+.tab-btn{display:flex;align-items:center;gap:6px;padding:10px 14px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text-secondary);font-family:var(--font);font-size:12.5px;font-weight:400;cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color .15s}
+.tab-btn.active{border-bottom-color:var(--primary);color:var(--primary);font-weight:500}
+.tab-btn .tb{font-size:9.5px;font-weight:600;padding:1px 5px;border-radius:10px;background:var(--surface2);color:var(--text-tertiary);border:1px solid var(--border);min-width:18px;text-align:center}
+.tab-btn.active .tb{background:var(--blue-bg);color:var(--blue-text);border:none}
+.tab-content{display:none;padding:16px 20px}.tab-content.active{display:block}
+
+/* ═══ KPI ═══ */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+.kpi{padding:14px 16px;position:relative;overflow:hidden}.kpi .acc{position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 2px 2px 0}
+.kpi .kl{font-size:9px;color:var(--text-tertiary);letter-spacing:.06em;margin-bottom:4px;padding-left:2px}
+.kpi .kv{font-size:24px;font-weight:600;line-height:1;margin-bottom:3px;padding-left:2px}
+.kpi .ks{font-size:10.5px;color:var(--text-tertiary);padding-left:2px}
+.kpi .kt{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;margin-top:6px;padding:2px 7px;border-radius:4px}
+
+/* ═══ FUNNEL ═══ */
+.funnel{display:flex;align-items:center;gap:0;overflow-x:auto;padding:6px 0}
+.funnel-step{text-align:center;min-width:90px;flex-shrink:0}.funnel-step .fv{font-size:20px;font-weight:700;line-height:1}.funnel-step .fl{font-size:9px;color:var(--text-tertiary);margin-top:2px}
+.funnel-arrow{color:var(--text-tertiary);font-size:16px;padding:0 4px;flex-shrink:0}
+
+/* ═══ EMAIL LIST ═══ */
+.email-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;gap:12px}
+.email-row:hover{background:var(--surface2)}
+.email-row .sender{font-size:13px;font-weight:600;color:var(--text-primary)}.email-row .email-addr{font-size:11px;color:var(--text-tertiary);margin-left:6px}
+.email-row .subject{font-size:11.5px;color:var(--text-secondary);margin-top:2px}
+.email-col{min-width:0;flex:1}.email-attach{font-size:11px;color:var(--text-tertiary);min-width:120px}.email-date{font-size:11px;color:var(--text-tertiary);min-width:100px;text-align:right}
+.email-status{min-width:70px;text-align:right}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.55);display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:16px;width:100%;max-width:1100px;margin:30px auto;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:scaleIn .2s ease both;overflow:hidden}
+.modal-header{padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.modal-close{background:var(--surface2);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;margin-left:auto}
+
+/* ═══ PIPELINE STEPPER ═══ */
+.pipeline{display:flex;align-items:flex-start;gap:0;padding:20px 20px 10px;overflow-x:auto}
+.pipe-group-label{font-size:9px;color:var(--text-tertiary);letter-spacing:.06em;text-align:center;margin-bottom:8px}
+.pipe-step{display:flex;flex-direction:column;align-items:center;min-width:95px;cursor:pointer;position:relative}
+.pipe-step .pipe-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2.5px solid var(--border);transition:all .15s;background:#fff}
+.pipe-step.done .pipe-icon{background:var(--green);border-color:var(--green);color:#fff}
+.pipe-step.active .pipe-icon{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 4px rgba(45,91,186,.2)}
+.pipe-step.bypassed .pipe-icon{background:var(--surface2);border-color:var(--border);color:var(--text-tertiary)}
+.pipe-step .pipe-label{font-size:10px;margin-top:6px;text-align:center;color:var(--text-secondary);font-weight:500;line-height:1.2}
+.pipe-step .pipe-status{font-size:8.5px;margin-top:2px;color:var(--green);font-weight:500}
+.pipe-step .pipe-time{font-size:8px;color:var(--text-tertiary);margin-top:1px}
+.pipe-connector{width:30px;height:2px;background:var(--border);margin-top:20px;flex-shrink:0}
+.pipe-connector.done{background:var(--green)}
+.pipe-step:hover .pipe-icon{transform:scale(1.08)}
+.pipe-step.selected .pipe-icon{box-shadow:0 0 0 4px rgba(45,91,186,.25)}
+
+/* ═══ STEP DETAIL ═══ */
+.step-detail{padding:16px 20px;border-top:1px solid var(--border);min-height:200px}
+.step-detail h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.detail-grid{display:grid;grid-template-columns:120px 1fr;gap:6px 16px;font-size:12.5px}
+.detail-grid .dl{color:var(--text-tertiary)}.detail-grid .dv{font-weight:500}
+.check-list{display:flex;flex-direction:column;gap:4px}.check-item{font-size:12px;display:flex;align-items:center;gap:6px}
+.check-item .ci{width:16px;text-align:center;flex-shrink:0}
+
+/* ═══ CHARTS ═══ */
+.chart-container{position:relative}.chart-bar{display:flex;align-items:flex-end;gap:6px;height:140px;padding:0 4px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-col .bar{width:100%;border-radius:4px 4px 0 0;transition:height .6s ease;min-height:2px;position:relative}
+.chart-col .bar-label{font-size:8px;color:var(--text-tertiary);white-space:nowrap}
+.chart-col .bar-val{font-size:9px;font-weight:600;color:var(--text-secondary)}
+.donut-ring{fill:none;stroke-width:20;transition:stroke-dasharray .6s ease}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="login-screen">
+  <div class="bg-glow"></div>
+  <div class="login-card">
+    <div style="margin-bottom:36px;display:flex;align-items:center;justify-content:center;gap:12px">
+      <svg viewBox="0 0 44 44" fill="none" width="44" height="44"><rect width="44" height="44" rx="10" fill="rgba(255,255,255,.15)"/><path d="M12 14h8v3h-8zM12 20h12v3H12zM12 26h20v3H12zM28 14l4 4-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      <span style="font-size:22px;font-weight:700;color:#fff;letter-spacing:-.5px">InvoiceAI</span>
+    </div>
+    <h1>ESO AP Agents</h1>
+    <p style="font-size:14px;color:rgba(255,255,255,.65);line-height:1.5">Accounts Payable Automation Platform</p>
+    <button class="login-btn" onclick="doLogin()">Get Started</button>
+    <p style="font-size:11.5px;color:rgba(255,255,255,.35);line-height:1.5">Access managed through your Databricks workspace.</p>
+    <div style="margin:28px 0 20px;height:1px;background:rgba(255,255,255,.1)"></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);letter-spacing:.04em">ENTERPRISE DATA PLATFORM · AGENTIC AUTOMATION</div>
+  </div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div id="app-screen">
+
+<!-- Header -->
+<header class="app-header">
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <svg viewBox="0 0 32 32" fill="none" width="32" height="32"><rect width="32" height="32" rx="7" fill="rgba(255,255,255,.12)"/><path d="M9 11h6v2H9zM9 15h9v2H9zM9 19h14v2H9zM20 11l3 3-3 3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <div style="width:1px;height:24px;background:rgba(255,255,255,.12)"></div>
+    <div><div style="font-size:13px;font-weight:600;color:#fff;line-height:1">ESO AP Agents</div><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.07em;margin-top:2px">ACCOUNTS PAYABLE AUTOMATION</div></div>
+  </div>
+  <div class="header-stats">
+    <div class="header-stat"><div class="val" style="color:var(--green)">26,783</div><div class="lbl">EMAILS</div></div>
+    <div class="header-stat"><div class="val" style="color:var(--green)">18,421</div><div class="lbl">EXTRACTED</div></div>
+    <div class="header-stat"><div class="val" style="color:var(--green)">96%</div><div class="lbl">AVG CONF</div></div>
+    <div class="header-stat"><div class="val" style="color:#fff">$48.2M</div><div class="lbl">PIPELINE</div></div>
+  </div>
+  <div style="flex:1"></div>
+  <div style="display:flex;align-items:center;gap:6px"><div style="position:relative;width:8px;height:8px"><div style="position:absolute;inset:0;border-radius:50%;background:var(--green);opacity:.25;animation:pulse 2s ease-in-out infinite;transform:scale(2)"></div><div style="position:absolute;inset:0;border-radius:50%;background:var(--green)"></div></div><span style="font-size:11.5px;color:rgba(255,255,255,.45)">Live · synced 5s ago</span></div>
+  <div style="display:flex;align-items:center;gap:4px;margin-left:8px"><span style="font-size:10px;color:rgba(255,255,255,.4)">VIEW AS</span><select style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:2px 6px;font-size:11px;color:#333;font-family:var(--font);cursor:pointer"><option>Platform Admin</option><option>ESO Analyst</option><option>AP Approver</option><option>Leadership</option></select></div>
+  <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 10px 5px 6px">
+    <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#2D5BBA,#5B8DEF);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;border:1.5px solid rgba(255,255,255,.2)">CS</div>
+    <div><div style="font-size:12px;color:#fff;font-weight:500;line-height:1">Chinmay S</div><div style="font-size:9.5px;color:rgba(255,255,255,.4);margin-top:1.5px">chinmay@company.com</div></div>
+  </div>
+</header>
+
+<!-- Tabs -->
+<nav class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-tab="insights">📊 Insights</button>
+  <button class="tab-btn" data-tab="ap-processor">⚙️ AP Processor</button>
+  <button class="tab-btn" data-tab="my-approvals">👤 My Approvals <span class="tb">5</span></button>
+  <button class="tab-btn" data-tab="admin">⚙️ Admin</button>
+  <button class="tab-btn" data-tab="pipeline">🔄 Pipeline</button>
+  <button class="tab-btn" data-tab="system-health">💚 System Health</button>
+</nav>
+
+<!-- ═══════════════ INSIGHTS TAB ═══════════════ -->
+<div class="tab-content active" id="tab-insights">
+  <!-- Journey funnel dark bar -->
+  <div class="card animate-in" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#0f1829,#1a2540);border:none">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:rgba(255,255,255,.5);margin-bottom:14px">END-TO-END INVOICE JOURNEY</div>
+    <div class="funnel">
+      <div class="funnel-step"><div class="fv" style="color:#2D5BBA">26,783</div><div class="fl" style="color:rgba(255,255,255,.4)">Emails Ingested</div></div>
+      <div class="funnel-arrow" style="color:rgba(255,255,255,.2)">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--amber)">21,490</div><div class="fl" style="color:rgba(255,255,255,.4)">Invoice Emails</div></div>
+      <div class="funnel-arrow" style="color:rgba(255,255,255,.2)">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--purple)">18,421</div><div class="fl" style="color:rgba(255,255,255,.4)">Extracted</div></div>
+      <div class="funnel-arrow" style="color:rgba(255,255,255,.2)">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--green)">17,856</div><div class="fl" style="color:rgba(255,255,255,.4)">Validated</div></div>
+      <div class="funnel-arrow" style="color:rgba(255,255,255,.2)">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--blue)">412</div><div class="fl" style="color:rgba(255,255,255,.4)">Pending Approval</div></div>
+      <div class="funnel-arrow" style="color:rgba(255,255,255,.2)">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--green-text)">16,892</div><div class="fl" style="color:rgba(255,255,255,.4)">Approved</div></div>
+      <div class="funnel-arrow" style="color:rgba(255,255,255,.2)">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--green-text)">16,540</div><div class="fl" style="color:rgba(255,255,255,.4)">SAP Posted</div></div>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-grid">
+    <div class="card kpi animate-in" style="animation-delay:50ms"><div class="acc" style="background:#2D5BBA"></div><div class="kl">TOTAL EMAILS</div><div class="kv" style="color:#2D5BBA">26,783</div><div class="ks">from Microsoft Graph API</div></div>
+    <div class="card kpi animate-in" style="animation-delay:80ms"><div class="acc" style="background:var(--amber)"></div><div class="kl">PENDING EMAILS</div><div class="kv" style="color:var(--amber)">342</div><div class="ks">not yet extracted</div><div class="kt" style="background:var(--green-bg);color:var(--green-text)">✓ Processing auto</div></div>
+    <div class="card kpi animate-in" style="animation-delay:110ms"><div class="acc" style="background:var(--green)"></div><div class="kl">INVOICES EXTRACTED</div><div class="kv" style="color:var(--green)">18,421</div><div class="ks">14,210 PO · 4,211 non-PO</div><div class="kt" style="background:var(--green-bg);color:var(--green-text)">1.2 invoices/email avg</div></div>
+    <div class="card kpi animate-in" style="animation-delay:140ms"><div class="acc" style="background:var(--blue)"></div><div class="kl">PIPELINE VALUE</div><div class="kv" style="color:var(--blue)">$48.2M</div><div class="ks">total invoice amount</div></div>
+    <div class="card kpi animate-in" style="animation-delay:170ms"><div class="acc" style="background:var(--purple)"></div><div class="kl">AVG CONFIDENCE</div><div class="kv" style="color:var(--purple)">96%</div><div class="ks">Azure OpenAI vision</div><div class="kt" style="background:var(--green-bg);color:var(--green-text)">↑ High accuracy</div></div>
+    <div class="card kpi animate-in" style="animation-delay:200ms"><div class="acc" style="background:var(--green)"></div><div class="kl">VALIDATED</div><div class="kv" style="color:var(--green)">17,856</div><div class="ks">17,102 passed · 612 warnings · 142 failed</div><div class="kt" style="background:var(--amber-bg);color:var(--amber-text)">142 need attention</div></div>
+  </div>
+
+  <!-- Processing funnel card -->
+  <div class="card animate-in" style="padding:16px 20px;margin-bottom:16px;animation-delay:230ms">
+    <div style="font-size:13px;font-weight:600;margin-bottom:14px">Processing funnel</div>
+    <div class="funnel">
+      <div class="funnel-step"><div class="fv" style="color:#2D5BBA">26,783</div><div class="fl">Emails Received</div></div><div class="funnel-arrow">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--amber)">24,108</div><div class="fl">With Attachments</div></div><div class="funnel-arrow">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--purple)">21,490</div><div class="fl">Emails Extracted</div></div>
+      <div style="text-align:center;padding:0 10px;margin-top:-10px"><div style="color:var(--purple);font-size:18px">⇒</div><div style="font-size:8px;color:var(--purple);font-weight:600;white-space:nowrap">1 email → 1.2 inv avg</div></div>
+      <div class="funnel-step"><div class="fv" style="color:var(--purple)">18,421</div><div class="fl">Invoices Extracted</div></div><div class="funnel-arrow">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--green)">17,856</div><div class="fl">Validated</div></div><div class="funnel-arrow">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--blue)">412</div><div class="fl">Pending Approval</div></div><div class="funnel-arrow">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--green-text)">16,892</div><div class="fl">Approved</div></div><div class="funnel-arrow">→</div>
+      <div class="funnel-step"><div class="fv" style="color:var(--green-text)">16,540</div><div class="fl">SAP Posted</div></div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px" class="animate-in" style="animation-delay:260ms">
+    <!-- Weekly volume chart -->
+    <div class="card" style="padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:13px;font-weight:600">Weekly invoice volume</div><span class="badge badge-green" style="font-size:9px">↑ 12% vs last week</span></div>
+      <div class="chart-bar" style="height:130px;align-items:flex-end;border-bottom:1px solid var(--border);padding-bottom:4px">
+        <div class="chart-col"><div class="bar-val">1.8K</div><div class="bar" style="height:52%;background:rgba(45,91,186,.2)"></div><div class="bar-label">W1</div></div>
+        <div class="chart-col"><div class="bar-val">2.1K</div><div class="bar" style="height:61%;background:rgba(45,91,186,.3)"></div><div class="bar-label">W2</div></div>
+        <div class="chart-col"><div class="bar-val">2.4K</div><div class="bar" style="height:70%;background:rgba(45,91,186,.4)"></div><div class="bar-label">W3</div></div>
+        <div class="chart-col"><div class="bar-val">1.9K</div><div class="bar" style="height:55%;background:rgba(45,91,186,.3)"></div><div class="bar-label">W4</div></div>
+        <div class="chart-col"><div class="bar-val">2.6K</div><div class="bar" style="height:76%;background:rgba(45,91,186,.5)"></div><div class="bar-label">W5</div></div>
+        <div class="chart-col"><div class="bar-val">2.8K</div><div class="bar" style="height:82%;background:rgba(45,91,186,.6)"></div><div class="bar-label">W6</div></div>
+        <div class="chart-col"><div class="bar-val">3.1K</div><div class="bar" style="height:90%;background:rgba(45,91,186,.7)"></div><div class="bar-label">W7</div></div>
+        <div class="chart-col"><div class="bar-val">3.4K</div><div class="bar" style="height:100%;background:var(--primary)"></div><div class="bar-label">W8</div></div>
+      </div>
+    </div>
+
+    <!-- Category donut -->
+    <div class="card" style="padding:16px 20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:14px">Volume by category</div>
+      <div style="display:flex;align-items:center;gap:24px">
+        <svg width="130" height="130" viewBox="0 0 130 130">
+          <circle cx="65" cy="65" r="50" fill="none" stroke="var(--surface2)" stroke-width="18"/>
+          <circle cx="65" cy="65" r="50" fill="none" stroke="#2D5BBA" stroke-width="18" stroke-dasharray="228 86" stroke-dashoffset="0" class="donut-ring"/>
+          <circle cx="65" cy="65" r="50" fill="none" stroke="var(--green)" stroke-width="18" stroke-dasharray="50 264" stroke-dashoffset="-228" class="donut-ring"/>
+          <circle cx="65" cy="65" r="50" fill="none" stroke="var(--amber)" stroke-width="18" stroke-dasharray="22 292" stroke-dashoffset="-278" class="donut-ring"/>
+          <text x="65" y="62" text-anchor="middle" font-size="18" font-weight="700" fill="var(--text-primary)" font-family="var(--font)">18,421</text>
+          <text x="65" y="78" text-anchor="middle" font-size="9" fill="var(--text-tertiary)" font-family="var(--font)">invoices</text>
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:2px;background:#2D5BBA"></div><span style="color:var(--text-secondary);min-width:100px">PO Invoice</span><span style="font-weight:600">14,210</span><span style="color:var(--text-tertiary);font-size:11px">(77%)</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div><span style="color:var(--text-secondary);min-width:100px">Non-PO</span><span style="font-weight:600">3,640</span><span style="color:var(--text-tertiary);font-size:11px">(20%)</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px"><div style="width:10px;height:10px;border-radius:2px;background:var(--amber)"></div><span style="color:var(--text-secondary);min-width:100px">Credit Notes</span><span style="font-weight:600">571</span><span style="color:var(--text-tertiary);font-size:11px">(3%)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: vendors + activity -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="animate-in" style="animation-delay:300ms">
+    <div class="card" style="padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:13px;font-weight:600">Top vendors</div></div>
+      <table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:4px 0;text-align:left;font-size:9px;color:var(--text-tertiary);letter-spacing:.05em;font-weight:600">VENDOR</th><th style="padding:4px 0;text-align:right;font-size:9px;color:var(--text-tertiary);letter-spacing:.05em;font-weight:600">INVOICES</th><th style="padding:4px 0;text-align:right;font-size:9px;color:var(--text-tertiary);letter-spacing:.05em;font-weight:600">VALUE</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:7px 0;font-size:12px;color:var(--blue);font-weight:500">TQL Logistics</td><td style="text-align:right;font-size:13px;font-weight:600">2,847</td><td style="text-align:right;font-size:12px;color:var(--text-secondary)">$12.4M</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:7px 0;font-size:12px;color:var(--blue);font-weight:500">Veritiv Corporation</td><td style="text-align:right;font-size:13px;font-weight:600">1,923</td><td style="text-align:right;font-size:12px;color:var(--text-secondary)">$8.7M</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:7px 0;font-size:12px;color:var(--blue);font-weight:500">Associated Packaging</td><td style="text-align:right;font-size:13px;font-weight:600">1,456</td><td style="text-align:right;font-size:12px;color:var(--text-secondary)">$6.2M</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:7px 0;font-size:12px;color:var(--blue);font-weight:500">Kenny Pipe & Supply</td><td style="text-align:right;font-size:13px;font-weight:600">1,102</td><td style="text-align:right;font-size:12px;color:var(--text-secondary)">$4.8M</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:7px 0;font-size:12px;color:var(--blue);font-weight:500">Industrial Matrix</td><td style="text-align:right;font-size:13px;font-weight:600">892</td><td style="text-align:right;font-size:12px;color:var(--text-secondary)">$3.1M</td></tr>
+      </tbody></table>
+    </div>
+    <div class="card" style="padding:16px 20px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px"><div style="font-size:13px;font-weight:600">Latest activity</div><div style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite"></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-green" style="font-size:9px;flex-shrink:0;margin-top:1px">OK</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">Invoice INV-2026-04821 posted to SAP</span><span style="font-size:10.5px;color:var(--text-tertiary)">2:44 PM</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-green" style="font-size:9px;flex-shrink:0;margin-top:1px">OK</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">Batch extraction completed — 12 invoices</span><span style="font-size:10.5px;color:var(--text-tertiary)">2:15 PM</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-green" style="font-size:9px;flex-shrink:0;margin-top:1px">OK</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">3-way match agent completed for PO-4510015668</span><span style="font-size:10.5px;color:var(--text-tertiary)">1:58 PM</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-amber" style="font-size:9px;flex-shrink:0;margin-top:1px">WARN</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">Duplicate flagged: INV-XX-0041</span><span style="font-size:10.5px;color:var(--text-tertiary)">1:42 PM</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-green" style="font-size:9px;flex-shrink:0;margin-top:1px">OK</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">Email intake sync — 47 new emails</span><span style="font-size:10.5px;color:var(--text-tertiary)">1:30 PM</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-green" style="font-size:9px;flex-shrink:0;margin-top:1px">OK</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">Validation agent completed — 47 passed</span><span style="font-size:10.5px;color:var(--text-tertiary)">1:15 PM</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px"><span class="badge badge-red" style="font-size:9px;flex-shrink:0;margin-top:1px">ERROR</span><span style="flex:1;color:var(--text-secondary);line-height:1.4">SAP posting failed for DM-7741 — retry queued</span><span style="font-size:10.5px;color:var(--text-tertiary)">12:48 PM</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ AP PROCESSOR TAB ═══════════════ -->
+<div class="tab-content" id="tab-ap-processor">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+    <div style="font-size:15px;font-weight:600">Incoming AP emails <span style="font-size:12px;color:var(--text-tertiary);font-weight:400">281 shown of 26,783</span></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input placeholder="Search sender, subject, invoice #, PO #..." style="font-family:var(--font);font-size:12px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;width:280px;outline:none" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+      <select style="font-family:var(--font);font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer"><option>Staged</option><option>All</option><option>Pending</option><option>Error</option></select>
+      <button class="btn" style="font-size:11px">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- Email table header -->
+  <div class="card" style="overflow:hidden;border-radius:12px">
+    <div style="display:flex;padding:8px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:9.5px;color:var(--text-tertiary);letter-spacing:.05em;font-weight:600">
+      <div style="flex:2">SENDER / SUBJECT</div><div style="flex:1">ATTACHMENTS</div><div style="min-width:100px">CATEGORY</div><div style="min-width:140px;text-align:right">RECEIVED (EST)</div><div style="min-width:80px;text-align:right">STATUS</div>
+    </div>
+    <div id="emailList"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MY APPROVALS TAB ═══════════════ -->
+<div class="tab-content" id="tab-my-approvals">
+  <div style="font-size:15px;font-weight:600;margin-bottom:16px">My Approval Queue</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="card" style="padding:14px 16px;border-left:3px solid var(--red)"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><span style="font-size:14px;font-weight:600">Pinnacle Corp</span><span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono);margin-left:6px">#PC-8821</span><div style="font-size:11px;color:var(--red);font-weight:500;margin-top:3px">⚠ Overdue by 2 days</div></div><div style="font-size:18px;font-weight:600;color:var(--primary)">$34,500.00</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-green" style="font-size:11px">✓ Approve</button><button class="btn btn-red" style="font-size:11px">✗ Reject</button><button class="btn" style="font-size:11px">View</button></div></div>
+    <div class="card" style="padding:14px 16px;border-left:3px solid var(--amber)"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><span style="font-size:14px;font-weight:600">SteelWorks Intl</span><span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono);margin-left:6px">#SW-4420</span><div style="font-size:11px;color:var(--amber);font-weight:500;margin-top:3px">Due in 5 days</div></div><div style="font-size:18px;font-weight:600;color:var(--primary)">$8,920.00</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-green" style="font-size:11px">✓ Approve</button><button class="btn btn-red" style="font-size:11px">✗ Reject</button><button class="btn" style="font-size:11px">View</button></div></div>
+    <div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><span style="font-size:14px;font-weight:600">Pacific Packaging</span><span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono);margin-left:6px">#PP-1193</span></div><div style="font-size:18px;font-weight:600;color:var(--primary)">$2,150.00</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-green" style="font-size:11px">✓ Approve</button><button class="btn btn-red" style="font-size:11px">✗ Reject</button><button class="btn" style="font-size:11px">View</button></div></div>
+  </div>
+</div>
+
+<!-- Placeholder tabs -->
+<div class="tab-content" id="tab-admin"><div class="card" style="padding:40px;text-align:center;color:var(--text-tertiary)">Admin settings — agent configuration, schedules, thresholds</div></div>
+<div class="tab-content" id="tab-pipeline"><div class="card" style="padding:40px;text-align:center;color:var(--text-tertiary)">Pipeline monitor — SAP staging queue, retry status, batch history</div></div>
+<div class="tab-content" id="tab-system-health"><div class="card" style="padding:40px;text-align:center;color:var(--text-tertiary)">System Health — agent uptime, API latency, error rates</div></div>
+
+</div><!-- /app-screen -->
+
+<!-- ═══════════════ EMAIL DETAIL MODAL ═══════════════ -->
+<div class="modal-overlay" id="emailModal">
+  <div class="modal-box">
+    <!-- Modal header -->
+    <div class="modal-header">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--purple);flex-shrink:0" id="modalAvatar">SE</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:700" id="modalTitle">Invoice # 3526386 from Associated Packaging, Inc.</div>
+        <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:2px" id="modalSubtitle">From: Sara Ellis &lt;Sara.Ellis@associatedpackaging.com&gt; · Received: May 6, 2026, 16:00:33 EST</div>
+      </div>
+      <span class="badge badge-green" style="font-size:11px">● Extracted</span>
+      <button class="btn" style="font-size:11px;padding:4px 8px">🔄</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Pipeline stepper -->
+    <div class="pipeline" id="pipelineStepper">
+      <div style="text-align:center;flex:1">
+        <div class="pipe-group-label">— EMAIL PIPELINE —</div>
+        <div style="display:flex;align-items:flex-start;justify-content:center;gap:0">
+          <div class="pipe-step done selected" data-step="intake" onclick="showStep('intake')"><div class="pipe-icon">✓</div><div class="pipe-label">Email Intake</div><div class="pipe-status">Completed</div><div class="pipe-time">16:00:33 EST</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step done" data-step="classification" onclick="showStep('classification')"><div class="pipe-icon">✓</div><div class="pipe-label">Classification</div><div class="pipe-status">Completed</div><div class="pipe-time">10:42:08 EST</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step done" data-step="extraction" onclick="showStep('extraction')"><div class="pipe-icon">✓</div><div class="pipe-label">Extraction</div><div class="pipe-status">Completed</div><div class="pipe-time">10:42:08 EST</div></div>
+        </div>
+      </div>
+      <div style="text-align:center;flex:1.5">
+        <div class="pipe-group-label">— PROCESSING PIPELINE —</div>
+        <div style="display:flex;align-items:flex-start;justify-content:center;gap:0">
+          <div class="pipe-step done" data-step="dedup" onclick="showStep('dedup')"><div class="pipe-icon">✓</div><div class="pipe-label">Deduplication</div><div class="pipe-status">Completed</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step done" data-step="validation" onclick="showStep('validation')"><div class="pipe-icon">✓</div><div class="pipe-label">Validation</div><div class="pipe-status">Completed</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step done" data-step="threeway" onclick="showStep('threeway')"><div class="pipe-icon">✓</div><div class="pipe-label">3-Way Match</div><div class="pipe-status">Completed</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step done" data-step="routing" onclick="showStep('routing')"><div class="pipe-icon">✓</div><div class="pipe-label">Routing</div><div class="pipe-status">Completed</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step bypassed" data-step="approval" onclick="showStep('approval')"><div class="pipe-icon">—</div><div class="pipe-label">Approval</div><div class="pipe-status" style="color:var(--text-tertiary)">Bypassed</div></div>
+          <div class="pipe-connector done"></div>
+          <div class="pipe-step done" data-step="staging" onclick="showStep('staging')"><div class="pipe-icon">✓</div><div class="pipe-label">Staging (Posting)</div><div class="pipe-status">Completed</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step detail area -->
+    <div class="step-detail" id="stepDetail"></div>
+  </div>
+</div>
+
+<script>
+// ═══ DATA ═══
+const EMAILS = [
+  {sender:"Jason Brydges",email:"aldg@aldna.com",subject:"1284 Invoice from BE3 — 04/01/2026 to 05/08/2026",file:"Invoice_#1284_-_01...",date:"May 8, 2026",time:"08:28:38 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"NoReply-eBusiness",email:"NoReply@veritiycorp.com",subject:"Veritiv Invoice 52484121396(4810001232)",file:"Invoice#52484121396...",date:"May 8, 2026",time:"08:20:48 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Veritiv",email:"veritiv@billtrust.com",subject:"Acct No. 165634: Your Invoice From Veritiv is Attached",file:"165634_38268506_328...",date:"May 8, 2026",time:"03:44:04 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Invoicing",email:"invoicing@tql.com",subject:"TQL Invoice: 36624528 / Customer PO#: 4210162453",file:"Invoice_36624528.pdf",date:"May 7, 2026",time:"23:48:34 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Invoicing",email:"invoicing@tql.com",subject:"TQL Invoice: 36624743 / Customer PO#: 4510017583",file:"Invoice_36624743.pdf",date:"May 7, 2026",time:"21:52:09 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Invoicing",email:"invoicing@tql.com",subject:"TQL Invoice: 36605005 / Customer PO#: 4502326055",file:"Invoice_36605005.pdf",date:"May 7, 2026",time:"21:51:11 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Sara Ellis",email:"Sara.Ellis@associatedpackaging.com",subject:"Invoice # 3526386 from Associated Packaging, Inc.",file:"Invoice_3526386_177...",date:"May 6, 2026",time:"16:00:33 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"ar@kennypipe.com",email:"ar@kennypipe.com",subject:"Invoice 7339872-00 from Kenny Pipe & Supply (30007730)",file:"2187231_85_86_36...",date:"May 6, 2026",time:"01:10:38 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Invoicing",email:"invoicing@tql.com",subject:"TQL Invoice: 36192614 / Customer PO#: 4502326093",file:"Invoice_36192614.pdf",date:"May 5, 2026",time:"18:42:43 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Invoicing",email:"invoicing@tql.com",subject:"TQL Invoice: 36203674 / Customer PO#: 4502325962",file:"Invoice_36203674.pdf",date:"May 5, 2026",time:"07:06:37 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Invoicing",email:"invoicing@tql.com",subject:"TQL Invoice: 36543881 / Customer PO#: 4510016147",file:"Invoice_36543881.pdf",date:"May 5, 2026",time:"14:07:51 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Industrial Matrix",email:"info@industrialmatrix.com",subject:"Invoice — INV-026244 from Industrial Matrix",file:"INV-026244.pdf",date:"May 5, 2026",time:"12:23:18 EST",cat:"PO Invoice",status:"Staged"},
+  {sender:"Cassandra Coates",email:"cassandra.coates@Goldcrust.com",subject:"Delivery Invoices — Week Ending 05/02",file:"128bite_Sub_2826_04...",date:"May 4, 2026",time:"18:36:54 EST",cat:"PO Invoice",status:"Staged"},
+];
+
+const STEP_DETAILS = {
+  intake: `<h3>📧 Email Intake Details</h3>
+<div class="detail-grid">
+<div class="dl">SUBJECT</div><div class="dv">Invoice # 3526386 from Associated Packaging, Inc.</div>
+<div class="dl">FROM</div><div class="dv">Sara Ellis &lt;Sara.Ellis@associatedpackaging.com&gt;</div>
+<div class="dl">TO</div><div class="dv">[{"emailAddress": {"name": "Accounts Payable (WHQ)", "address": "accountspayable@company.com"}}]</div>
+<div class="dl">CC</div><div class="dv">[]</div>
+<div class="dl">RECEIVED</div><div class="dv">May 6, 2026, 16:00:33 EST</div>
+<div class="dl">FOLDER</div><div class="dv">Inbox/Source</div>
+</div>
+<div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+<div style="font-size:12px;font-weight:600;margin-bottom:6px">📎 1 Attachment</div>
+<div style="font-size:12px;color:var(--blue);cursor:pointer">📄 Invoice_3526386_177809744f259.pdf</div>
+</div>
+<div style="margin-top:12px;padding:12px;background:#FFF8E6;border-left:3px solid var(--amber);border-radius:0 8px 8px 0">
+<div style="font-size:12px;font-weight:600;color:var(--amber-text);margin-bottom:4px">⚠ External Email Alert</div>
+<div style="font-size:11.5px;color:var(--amber-text);line-height:1.5">This email originated from outside the organization. Please exercise caution before clicking links, opening attachments, or responding.<br>Please find attached Invoice # 3526386. If you have any questions, feel free to reach out.</div>
+</div>
+<div style="margin-top:16px;display:flex;justify-content:flex-end"><button class="btn" style="font-size:11px">📧 View email</button></div>`,
+
+  classification: `<h3>🏷️ Classification Details</h3>
+<div class="detail-grid">
+<div class="dl">CATEGORY</div><div class="dv"><span class="badge badge-green" style="font-size:11px">● PO Invoice</span></div>
+<div class="dl">CONFIDENCE</div><div class="dv" style="color:var(--green)">98% — High</div>
+<div class="dl">METHOD</div><div class="dv">Azure OpenAI GPT-4o classification</div>
+<div class="dl">PROCESSING</div><div class="dv">< 1 second</div>
+</div>
+<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green-text)">✓ Email classified as invoice with PO reference — proceeding to extraction</div>`,
+
+  extraction: `<h3>🔍 Extraction Details</h3>
+<div style="margin-bottom:16px;padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;gap:12px">
+<div style="font-size:12px;color:var(--text-secondary)">Invoice 1/1</div>
+<div style="font-weight:600;font-family:var(--font-mono)">3526386</div>
+<div>Associated Packaging, Inc.</div>
+<span class="badge badge-blue" style="font-size:10px">PO</span>
+<div style="flex:1"><div class="conf-bar" style="max-width:80px;height:6px"><div class="conf-bar-fill" style="width:96%;background:var(--green)"></div></div></div>
+<div style="font-size:12px;color:var(--text-secondary)">96%</div>
+<div style="font-size:16px;font-weight:700;color:var(--primary)">$10,540.80</div>
+<button class="btn" style="font-size:11px" onclick="showStep('invoice_view')">👁 View invoice</button>
+</div>
+<div class="detail-grid">
+<div class="dl">INVOICE NO.</div><div class="dv" style="font-family:var(--font-mono)">3526386</div>
+<div class="dl">PO NUMBER</div><div class="dv" style="font-family:var(--font-mono)">4510015668</div>
+<div class="dl">INVOICE DATE</div><div class="dv">—</div>
+<div class="dl">AMOUNT DUE</div><div class="dv" style="color:var(--primary);font-weight:700">$10,540.80</div>
+<div class="dl">VENDOR</div><div class="dv">Associated Packaging, Inc.</div>
+<div class="dl">CATEGORY</div><div class="dv">PO Invoice</div>
+<div class="dl">CURRENCY</div><div class="dv">USD</div>
+<div class="dl">CONFIDENCE</div><div class="dv" style="color:var(--green)">96% · High</div>
+</div>
+<div style="margin-top:16px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green-text)">● 9 of 9 steps done</div>`,
+
+  invoice_view: `<h3>📄 Invoice Preview — #3526386</h3>
+<div style="display:flex;gap:20px;flex-wrap:wrap">
+<div style="width:320px;min-height:380px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);padding:24px;font-size:11px;line-height:1.6;position:relative">
+<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:48px;font-weight:700;color:rgba(0,0,0,.03);letter-spacing:4px">INVOICE</div>
+<div style="display:flex;justify-content:space-between;margin-bottom:16px"><div><div style="font-weight:700;font-size:13px;color:#333">ASSOCIATED PACKAGING</div><div style="font-size:9px;color:#888;margin-top:2px">INC.</div><div style="font-size:8px;color:#aaa;margin-top:4px;line-height:1.5">4200 Industrial Pkwy<br>Buffalo, NY 14227</div></div><div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--primary)">INVOICE</div><div style="font-size:8px;color:#888;margin-top:4px">#3526386</div><div style="font-size:8px;color:#888">PO: 4510015668</div></div></div>
+<table style="width:100%;border-collapse:collapse;font-size:9px;margin-top:8px"><thead><tr style="border-bottom:1px solid #ddd"><th style="text-align:left;padding:4px 0;color:#888;font-weight:500">Description</th><th style="text-align:right;padding:4px 0;color:#888;font-weight:500">Qty</th><th style="text-align:right;padding:4px 0;color:#888;font-weight:500">Amount</th></tr></thead><tbody><tr><td style="padding:4px 0">Packaging Materials — Corrugated</td><td style="text-align:right">72.0</td><td style="text-align:right">$10,540.80</td></tr></tbody></table>
+<div style="border-top:2px solid #333;margin-top:10px;padding-top:6px;display:flex;justify-content:space-between"><span style="font-weight:600">TOTAL</span><span style="font-size:14px;font-weight:700;color:var(--primary)">$10,540.80</span></div>
+</div>
+<div style="flex:1;min-width:260px">
+<div style="font-size:12px;font-weight:600;margin-bottom:8px">Extracted Fields</div>
+<div class="detail-grid" style="font-size:12px">
+<div class="dl">Vendor</div><div class="dv">Associated Packaging, Inc.</div>
+<div class="dl">Invoice #</div><div class="dv" style="font-family:var(--font-mono)">3526386</div>
+<div class="dl">PO #</div><div class="dv" style="font-family:var(--font-mono);color:var(--green)">✓ 4510015668</div>
+<div class="dl">Amount</div><div class="dv" style="color:var(--primary);font-weight:700;font-size:14px">$10,540.80</div>
+<div class="dl">Currency</div><div class="dv">USD</div>
+<div class="dl">Confidence</div><div class="dv" style="color:var(--green)">96% — High</div>
+</div>
+<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><span class="badge badge-green" style="font-size:10px">Vendor: 98%</span><span class="badge badge-green" style="font-size:10px">Amount: 99%</span><span class="badge badge-green" style="font-size:10px">PO: 97%</span><span class="badge badge-green" style="font-size:10px">Lines: 93%</span></div>
+</div></div>
+<div style="margin-top:12px;text-align:right"><button class="btn" onclick="showStep('extraction')">← Back to Extraction</button></div>`,
+
+  dedup: `<h3>🔍 Deduplication Details</h3>
+<div class="detail-grid">
+<div class="dl">STATUS</div><div class="dv"><span class="badge badge-green">✓ No duplicates found</span></div>
+<div class="dl">METHOD</div><div class="dv">Exact match + fuzzy match + fingerprint</div>
+<div class="dl">CHECKED AGAINST</div><div class="dv">18,420 existing invoices</div>
+</div>
+<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green-text)">✓ Invoice #3526386 is unique — no duplicates detected</div>`,
+
+  validation: `<h3>✅ Validation Details</h3>
+<div style="display:flex;gap:16px;margin-bottom:16px">
+<div style="padding:12px 16px;background:var(--green-bg);border-radius:10px;text-align:center;min-width:80px"><div style="font-size:24px;font-weight:700;color:var(--green)">10</div><div style="font-size:10px;color:var(--green-text)">PASSED</div></div>
+<div style="padding:12px 16px;background:var(--surface2);border-radius:10px;text-align:center;min-width:80px"><div style="font-size:24px;font-weight:700;color:var(--text-tertiary)">0</div><div style="font-size:10px;color:var(--text-tertiary)">WARNINGS</div></div>
+</div>
+<div style="font-size:12px;font-weight:600;color:var(--green-text);margin-bottom:12px">All 10 checks passed</div>
+<div class="check-list">
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Invoice number present</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Vendor name present</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Total amount present</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Invoice date present</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Amount valid ($10,540.80)</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Invoice date valid (2026-05-06)</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Due date valid (2026-06-05)</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> PO number present (4510015668)</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> Currency valid (USD)</div>
+<div class="check-item"><div class="ci" style="color:var(--green)">✓</div> High extraction confidence</div>
+</div>`,
+
+  threeway: `<h3>🔗 3-Way Match Details</h3>
+<div class="detail-grid" style="margin-bottom:16px">
+<div class="dl">PO NUMBER</div><div class="dv" style="font-family:var(--font-mono);font-weight:700">4510015668</div>
+</div>
+<div style="font-size:11px;color:var(--text-tertiary);letter-spacing:.05em;margin-bottom:10px;font-weight:600">VALIDATION POINTS</div>
+<div style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">Aggregated (Single PO Line)</div>
+<div class="check-list" style="gap:10px">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--green-bg);border-radius:8px">
+  <div style="font-size:12px;font-weight:600;min-width:120px">✓ Line Matching</div>
+  <span class="badge badge-green">MATCHED</span>
+  <span style="font-size:11px;color:var(--green-text)">PASS — Single PO line — aggregated 1 invoice line(s)</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--green-bg);border-radius:8px">
+  <div style="font-size:12px;font-weight:600;min-width:120px">✓ GR Verification</div>
+  <span class="badge badge-green">MATCHED</span>
+  <span style="font-size:11px;color:var(--green-text)">PASS — GR received: 72.0, available: 72.0</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--green-bg);border-radius:8px">
+  <div style="font-size:12px;font-weight:600;min-width:120px">✓ Amount Tolerance</div>
+  <span class="badge badge-green">PASS</span>
+  <span style="font-size:11px;color:var(--green-text)">PASS — Invoice total $10,540.80 = expected $10,540.80</span>
+</div>
+</div>`,
+
+  routing: `<h3>📨 Routing Details</h3>
+<div class="detail-grid">
+<div class="dl">RULE APPLIED</div><div class="dv">Auto-route: PO matched + 3-way match passed + below threshold</div>
+<div class="dl">THRESHOLD</div><div class="dv">$25,000.00 (amount $10,540.80 is below)</div>
+<div class="dl">COST CENTER</div><div class="dv">CC-4120 Manufacturing Packaging</div>
+<div class="dl">ROUTED TO</div><div class="dv">Auto-approved (3-way match, below threshold)</div>
+<div class="dl">DECISION</div><div class="dv"><span class="badge badge-green">Bypassed approval — auto-approved</span></div>
+</div>
+<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green-text)">✓ Invoice auto-approved: PO matched, 3-way match passed, amount within auto-approval threshold</div>`,
+
+  approval: `<h3>👤 Approval Details</h3>
+<div class="detail-grid">
+<div class="dl">STATUS</div><div class="dv"><span class="badge badge-gray">Bypassed</span></div>
+<div class="dl">REASON</div><div class="dv">3-way match passed + amount below auto-approval threshold ($25,000)</div>
+</div>
+<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text-secondary)">ℹ Manual approval was not required for this invoice — it was auto-approved by the routing agent based on matching rules.</div>`,
+
+  staging: `<h3>🏦 Staging (SAP Posting) Details</h3>
+<div class="detail-grid">
+<div class="dl">STATUS</div><div class="dv"><span class="badge badge-green">✓ Successfully posted</span></div>
+<div class="dl">SAP DOCUMENT</div><div class="dv" style="font-family:var(--font-mono);font-weight:700">#5100089214</div>
+<div class="dl">COMPANY CODE</div><div class="dv">1000</div>
+<div class="dl">POSTING DATE</div><div class="dv">May 6, 2026</div>
+<div class="dl">PAYMENT DUE</div><div class="dv">Jun 5, 2026</div>
+<div class="dl">GL ACCOUNT</div><div class="dv">5100 — Raw Materials / Packaging</div>
+<div class="dl">COST CENTER</div><div class="dv">CC-4120</div>
+</div>
+<div style="margin-top:12px;padding:10px;background:var(--green-bg);border-radius:8px;font-size:12px;color:var(--green-text)">✓ Invoice posted to SAP S/4HANA — payment scheduled for Jun 5, 2026</div>`,
+};
+
+// ═══ RENDER EMAILS ═══
+function renderEmails(){
+  const el = document.getElementById('emailList');
+  el.innerHTML = EMAILS.map((e,i) => `
+    <div class="email-row" onclick="openEmail(${i})" style="animation:fadeIn .2s ease ${i*30}ms both">
+      <div class="email-col">
+        <div><span class="sender">${e.sender}</span><span class="email-addr">${e.email}</span></div>
+        <div class="subject">${e.subject}</div>
+      </div>
+      <div class="email-attach">1 file<br><span style="font-size:10px;color:var(--text-tertiary)">${e.file}</span></div>
+      <div style="min-width:100px"><span class="badge badge-green" style="font-size:10px">● ${e.cat}</span></div>
+      <div class="email-date">${e.date}<br><span style="font-size:10px">${e.time}</span></div>
+      <div class="email-status"><span class="badge badge-green" style="font-size:10px">● ${e.status}</span></div>
+    </div>`).join('');
+}
+
+// ═══ NAVIGATION ═══
+function doLogin(){ document.getElementById('login-screen').style.display='none'; document.getElementById('app-screen').style.display='block'; renderEmails(); }
+
+document.getElementById('tabNav').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+});
+
+// ═══ EMAIL MODAL ═══
+function openEmail(idx){
+  const e = EMAILS[idx];
+  document.getElementById('modalAvatar').textContent = e.sender.split(' ').map(w=>w[0]).join('').substring(0,2);
+  document.getElementById('modalTitle').textContent = e.subject;
+  document.getElementById('modalSubtitle').textContent = `From: ${e.sender} <${e.email}> · Received: ${e.date}, ${e.time}`;
+  showStep('intake');
+  document.getElementById('emailModal').classList.add('open');
+}
+function closeModal(){ document.getElementById('emailModal').classList.remove('open'); }
+
+function showStep(step){
+  // highlight active step
+  document.querySelectorAll('.pipe-step').forEach(s => s.classList.remove('selected'));
+  const el = document.querySelector(`.pipe-step[data-step="${step}"]`);
+  if(el) el.classList.add('selected');
+  // show detail
+  document.getElementById('stepDetail').innerHTML = STEP_DETAILS[step] || '<div style="padding:20px;text-align:center;color:var(--text-tertiary)">Select a pipeline step above</div>';
+}
+
+// Close modal on escape / backdrop
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+document.getElementById('emailModal').addEventListener('click', e => { if(e.target===document.getElementById('emailModal')) closeModal(); });
+</script>
+</body>
+</html>
